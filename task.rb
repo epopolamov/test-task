@@ -33,12 +33,11 @@ def count_uniq_browsers(sessions)
 end
 
 def read_file(name)
-  file_lines = File.read(name).split("\n")
   users = []
   sessions = []
   parser = Parser.new
 
-  file_lines.each do |line|
+  File.foreach(name) do |line|
     cols = line.split(',')
     users.push(parser.parse_user_fields(line)) if cols[0] == 'user'
     sessions.push(parser.parse_session_fields(line)) if cols[0] == 'session'
@@ -80,7 +79,7 @@ def work
       'alwaysUsedChrome' => user_browsers.all? { |b| b.upcase =~ /CHROME/ },
       # Sessions dates separate by comma, in reverse order, iso8601
       'dates' => user[:sessions].map { |s| s['date'] }
-                     .map { |d| Date.parse(d) }.sort.reverse.map(&:iso8601)
+                                .map { |d| Date.parse(d) }.sort.reverse.map(&:iso8601)
     }
   end
 
@@ -91,7 +90,7 @@ class TestMe < Minitest::Test
   def setup
     File.write('result.json', '')
     File.write('data.txt',
-      'user,0,Leida,Cira,0
+               'user,0,Leida,Cira,0
 session,0,0,Safari 29,87,2016-10-23
 session,0,1,Firefox 12,118,2017-02-27
 session,0,2,Internet Explorer 28,31,2017-03-28
