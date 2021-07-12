@@ -18,12 +18,10 @@ class Parser
   end
 end
 
-def collect_stats_from_users(report, users_objects, &block)
-  users_objects.each do |user|
-    user_key = "#{user[:attributes]['first_name']} #{user[:attributes]['last_name']}"
-    report['usersStats'][user_key] ||= {}
-    report['usersStats'][user_key] = report['usersStats'][user_key].merge(block.call(user))
-  end
+def collect_stats_from_user(report, user, &block)
+  user_key = "#{user[:attributes]['first_name']} #{user[:attributes]['last_name']}"
+  report['usersStats'][user_key] ||= {}
+  report['usersStats'][user_key] = report['usersStats'][user_key].merge(block.call(user))
 end
 
 def count_uniq_browsers(sessions)
@@ -52,35 +50,30 @@ def work
   users, sessions = read_file('data.txt')
 
   report = {}
-  report[:totalUsers] = users.count
+  report['totalUsers'] = users.count
   report['uniqueBrowsersCount'] = count_uniq_browsers(sessions)
   report['totalSessions'] = sessions.count
-  report['allBrowsers'] = sessions.map { |s| s['browser'] }.map(&:upcase).sort.uniq
-                                  .join(',')
+  report['allBrowsers'] = sessions.map { |s| s['browser'].upcase }.sort.uniq.join(',')
+  report['usersStats'] = {}
 
-  users_objects = []
   users.each do |user|
     user_sessions = sessions.select { |session| session['user_id'] == user['id'] }
-    users_objects.push({ attributes: user, sessions: user_sessions })
-  end
-
-  report['usersStats'] = {}
-  collect_stats_from_users(report, users_objects) do |user|
-    user_time = user[:sessions].map { |s| s['time'] }.map(&:to_i)
-    user_browsers = user[:sessions].map { |s| s['browser'] }
-    {
-      'sessionsCount' => user[:sessions].count,
-      'totalTime' => "#{user_time.sum} min.",
-      'longestSession' => "#{user_time.max} min.",
-      'browsers' => user_browsers.map(&:upcase).sort.join(', '),
-      # Use IE?
-      'usedIE' => user_browsers.any? { |b| b.upcase =~ /INTERNET EXPLORER/ },
-      # Always only Chrome?
-      'alwaysUsedChrome' => user_browsers.all? { |b| b.upcase =~ /CHROME/ },
-      # Sessions dates separate by comma, in reverse order, iso8601
-      'dates' => user[:sessions].map { |s| s['date'] }
-                                .map { |d| Date.parse(d) }.sort.reverse.map(&:iso8601)
-    }
+    collect_stats_from_user(report, { attributes: user, sessions: user_sessions }) do |u|
+      user_time = u[:sessions].map { |s| s['time'].to_i }
+      user_browsers = u[:sessions].map { |s| s['browser'].upcase }
+      {
+        'sessionsCount' => u[:sessions].count,
+        'totalTime' => "#{user_time.sum} min.",
+        'longestSession' => "#{user_time.max} min.",
+        'browsers' => user_browsers.sort.join(', '),
+        # Use IE?
+        'usedIE' => user_browsers.any? { |b| b =~ /INTERNET EXPLORER/ },
+        # Always only Chrome?
+        'alwaysUsedChrome' => user_browsers.all? { |b| b =~ /CHROME/ },
+        # Sessions dates separate by comma, in reverse order, iso8601
+        'dates' => u[:sessions].map { |s| Date.parse(s['date']).iso8601 }.sort.reverse
+      }
+    end
   end
 
   File.write('result.json', "#{report.to_json}\n")
