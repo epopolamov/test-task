@@ -47,7 +47,7 @@ end
 def work
   return unless File.file? 'data.txt'
 
-  users, sessions = read_file('data.txt')
+  users, sessions = read_file 'data.txt'
 
   report = {}
   report['totalUsers'] = users.count
@@ -75,7 +75,6 @@ def work
       }
     end
   end
-
   File.write('result.json', "#{report.to_json}\n")
 end
 
