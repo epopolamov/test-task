@@ -71,7 +71,7 @@ def work
         # Always only Chrome?
         'alwaysUsedChrome' => user_browsers.all? { |b| b =~ /CHROME/ },
         # Sessions dates separate by comma, in reverse order, iso8601
-        'dates' => u[:sessions].map { |s| Date.parse(s['date']).iso8601 }.sort.reverse
+        'dates' => u[:sessions].map { |s| Date.parse(s['date']).iso8601 }.sort_by.reverse!
       }
     end
   end
